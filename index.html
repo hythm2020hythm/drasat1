@@ -1,0 +1,535 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App</title>
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        #score-counter {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px;
+            background-color: #333;
+            border-bottom-right-radius: 10px;
+            color: white;
+            z-index: 999;
+        }
+
+        #quiz-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 60px 20px 20px; /* تم تعديل ال padding ليضمن عدم تغطية الصورة */
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            position: relative; /* تمت إضافة position: relative; للسماح لـ #score-counter بالتحكم فيه */
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: white;
+            background-color: #2196F3;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        button {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0c0c0c;
+        }
+
+        #timer {
+            margin-bottom: 10px;
+        }
+
+        #result-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-text {
+            margin-bottom: 10px;
+        }
+
+        .correct {
+            background-color: green;
+            color: white;
+        }
+
+        .incorrect {
+            background-color: red;
+            color: white;
+        }
+
+        /* CSS for displaying images to fit the screen */
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="score-counter">Score: <span id="score">0</span></div>
+
+    <div id="quiz-container">
+        <img id="question-image" src="" alt="Question Image">
+        <div id="choices"></div>
+        <button onclick="checkAnswer()">Submit Answer</button>
+        <p id="timer"></p>
+    </div>
+
+    <div id="result-container">
+        <h2>Quiz Result</h2>
+        <p class="result-text" id="result"></p>
+        <div id="correct-answers"></div>
+        <button id="retryBtn" style="display: none;" onclick="retryQuiz()">Retry Quiz</button>
+    </div>
+
+    <script>
+        var currentQuestion = 0;
+        var score = 0;
+        var timeLeft = 1800; // تحديد عدد الثواني
+        var timerInterval;
+
+        var quizData = [
+
+        {
+     "question": "في أي دولة تقع صحراء كلهاري ",
+    "choices": ["ناميبيا", "بوتسوانا", "جنوب أفريقيا", "زيمبابوي"],
+     "correctAnswer": "جنوب أفريقيا"
+},
+          {
+     "question": "أين تقع صحراء لوط ",
+    "choices": ["جنوب شرق إيران", "شمال غرب السعودية", "جنوب مصر", "غرب ليبيا"],
+     "correctAnswer": "جنوب شرق إيران"
+},
+          {
+     "question": "في أي دولة تقع محافظة خوزستان ",
+    "choices": ["العراق", "الكويت", "إيران", "السعودية"],
+     "correctAnswer": "إيران"
+},
+          {
+    "question": "أي جهة يتبع مجلس الأمن السيبراني ",
+    "choices": ["وزارة الداخلية", "وزارة الدفاع", "وزارة الخارجية", "رئاسة الجمهورية"],
+     "correctAnswer": "وزارة الخارجية"
+},
+          {
+   "question": "في أي عام تم توقيع اتفاقية أديس أبابا بين بريطانيا وإثيوبيا ",
+    "choices": ["1896", "1902", "1935", "1941"],
+     "correctAnswer": "1902"
+},
+          {
+    "question": "في أي دولة يقع نهر تشيلد فين ",
+    "choices": ["فرنسا", "إيطاليا", "إنجلترا", "ألمانيا"],
+     "correctAnswer": "فرنسا"
+},
+          {
+    "question": "أي الدولتين يمر بها نهر كابا ",
+    "choices": ["غينيا وسيراليون", "غينيا وليبيريا", "سيراليون وليبيريا", "كوت ديفوار وغانا"],
+    "correctAnswer": "غينيا وسيراليون"
+},
+          {
+    "question": "في أي قارة يوجد نهر كابا",
+    "choices": ["أفريقيا", "آسيا", "أوروبا", "أمريكا الجنوبية"],
+     "correctAnswer": "أفريقيا"
+},
+          {
+    "question": "من كان حاكم مصر عام 1914 ",
+    "choices": ["عباس حلمي الثاني", "حسين كامل", "فؤاد الأول", "فاروق الأول"],
+     "correctAnswer": "حسين كامل"
+},
+          {
+    "question": "ما هي أكبر دولة في إفريقيا من حيث الإنتاج الزراعي ",
+    "choices": ["نيجيريا", "إثيوبيا", "جنوب إفريقيا", "السودان"],
+     "correctAnswer": "نيجيريا"
+},
+          {
+    "question": "أي دولة عربية هي أكبر منتج للأسماك ",
+    "choices": ["المغرب", "مصر", "السعودية", "السودان"],
+     "correctAnswer": "المغرب"
+},
+          {
+    "question": "ما هو أصغر نهر في العالم ",
+    "choices": ["نهر الرو", "نهر الدانوب", "نهر النيل", "نهر الأمازون"],
+     "correctAnswer": "نهر الرو"
+},
+          {
+    "question": "ما هو نظام الحكم في الصين",
+    "choices": ["ملكية دستورية", "جمهورية ديمقراطية", "جمهوري", "ديكتاتورية عسكرية"],
+     "correctAnswer": "جمهوري"
+},
+          {
+    "question": "ما هي أكبر مدينة تجارية في الدولة القديمة (النوبة) ",
+    "choices": ["طيبة", "مروي", "ناباتا", "كوش"],
+     "correctAnswer": "طيبة"
+},
+          {
+    "question": "في أي قارة تقع الدول الاسكندنافية ",
+    "choices": ["آسيا", "أفريقيا", "أوروبا", "أمريكا الشمالية"],
+     "correctAnswer": "أوروبا"
+},
+          {
+    "question": "من يعد أول من أسس نظام البريد في الإسلام ",
+    "choices": ["الخليفة عمر بن الخطاب", "الخليفة معاوية بن أبي سفيان", "الخليفة عبد الملك بن مروان", "الخليفة هارون الرشيد"],
+     "correctAnswer": "الخليفة معاوية بن أبي سفيان"
+},
+          {
+    "question": "في أي معركة رفع المسلمون المصاحف على رؤوس الرماح ",
+    "choices": ["معركة الجمل", "معركة صفين", "معركة النهروان", "معركة مرج دابق"],
+    "correctAnswer": "معركة صفين"
+},
+          {
+    "statement": "الدول التي تطل ع باب المندب هى اليمن وجبيوتي وإريتريا والصومال",
+    "choices": ["صح", "خطأ"],
+    "correctAnswer": "صح"
+},
+          {
+    "question": "أين تقع جبال بيندوس ",
+    "choices": ["شمال اليونان وجنوب ألبانيا", "شمال مقدونيا الشمالية وجنوب صربيا", "غرب تركيا وشرق بلغاريا", "جنوب إيطاليا وشمال صقلية"],
+    "correctAnswer": "شمال اليونان وجنوب ألبانيا"
+},
+          {
+    "question": "أين تقع جبال الألب ",
+    "choices": ["شبه جزيرة إيطاليا", "فرنسا", "سويسرا", "النمسا"],
+    "correctAnswer": "سويسرا"
+},
+          {
+    "question": "في أي دولة تقع جبال كنتبريان ",
+    "choices": ["إيطاليا", "إسبانيا", "فرنسا", "البرتغال"],
+    "correctAnswer": "إسبانيا"
+},
+          {
+    "question": "مع من تحالفت قبيلة قريش ضد الرسول صلى الله عليه وسلم في غزوة بدر الكبرى ",
+    "choices": ["بنو بكر", "بنو سليم", "بنو كنانة", "بنو تميم"],
+    "correctAnswer": "بنو بكر"
+},
+          {
+    "question": "مع أي قبيلة تحالف الرسول صلى الله عليه وسلم ",
+    "choices": ["خزاعة", "بنو تميم", "بنو أسد", "بنو خزرج"],
+    "correctAnswer": "خزاعة"
+},
+          {
+    "question": "وادي حوران أكبر واديان في العراق ",
+    "choices": ["صح", "خطأ"],
+    "correctAnswer": "صح"
+},
+          {
+    "question": "تقع البحيرات العظمى بالقرب من مصب نهر سانت لورنس ",
+     "choices": ["صح", "خطأ"],
+    "correctAnswer": "صح"
+},
+          {
+    "question": "تقع البحيرات العظمى بالقرب من أي مصب ",
+    "choices": ["نهر المسيسيبي", "نهر نيلسون", "نهر سانت لورنس", "نهر الأمازون"],
+    "correctAnswer": "نهر سانت لورنس"
+},
+          {
+    "question": "إلى أين يتدفق نهر الرور؟",
+    "choices": ["البحر الأبيض المتوسط", "البحر الأحمر", "المحيط الأطلسي", "بحر الشمال"],
+    "correctAnswer": "بحر الشمال"
+},
+          {
+    "question": "ما هو اسم شلالات الكونغو ",
+    "choices": ["شلالات فيكتوريا", "شلالات نياجرا", "شلالات انجا", "شلالات إجوازو"],
+    "correctAnswer": "شلالات إجوازو"
+},
+          {
+    "question": "يمر بقارة استراليا : مدار الجدي",
+    "choices": ["صح", "خطأ"],
+    "correctAnswer": "خطأ"
+},
+          {
+    "question": "كم استمر حكم الدولة الإخشيدية ",
+    "choices": ["24 سنة", "34 سنة", "44 سنة", "54 سنة"],
+    "correctAnswer": "34 سنة"
+},
+          {
+    "question": "ما هو أحد أنواع الأسلحة التي استخدمتها إيطاليا في الحرب العالمية الثانية ",
+    "choices": ["القنابل الذرية", "الصواريخ العابرة للقارات", "قذائف الهاون", "الغازات السامة"],
+    "correctAnswer": "قذائف الهاون"
+},
+          {
+    "question": "أي دولة كانت أول دولة تغادر الاتحاد السوفيتي ",
+    "choices": ["ليتوانيا", "إستونيا", "لاتفيا", "أوكرانيا"],
+    "correctAnswer": "ليتوانيا"
+},
+          {
+    "question": "كم استمرت الدعوة الإسلامية في مكة قبل الهجرة ",
+    "choices": ["10 سنوات", "13 سنة", "23 سنة", "30 سنة"],
+    "correctAnswer": "23 سنة"
+},
+          {
+    "question": "في عهد أي سلطان تمكن المسلمون من التخلص من الصليبيين نهائيا ",
+    "choices": ["صلاح الدين الأيوبي", "الاشرف خليل بن قلاوون", "بيبرس الجاشنكير", "سليم الأول"],
+    "correctAnswer": "الاشرف خليل بن قلاوون"
+},
+          {
+    "question": "من كان أول من نقض العهد مع الرسول (صلى الله عليه وسلم) من اليهود ",
+    "choices": ["بنو قينقاع", "الأشرف خليل بن قلاوون", "بنو النضير", "بنو قريظة"],
+    "correctAnswer": "بنو قينقاع"
+},
+          {
+    "question": "في أي عام حدث حريق مكتبة الإسكندرية القديمة ",
+    "choices": ["48 ق.م", "33 ق.م", "47 ق.م", "64 ق.م"],
+    "correctAnswer": "48 ق.م"
+},
+          {
+    "question": "بين من دارت معركة اليرموك",
+    "choices": ["المسلمين والفرس", "المسلمين والروم", "المسلمين والصليبيين", "المسلمين والمغول"],
+    "correctAnswer": "المسلمين والروم"
+},
+          {
+    "question": "من هو أول من أدخل نظام الوراثة في الحكم في الإسلام ",
+    "choices": ["أبو بكر الصديق", "عمر بن الخطاب", "عثمان بن عفان", "معاوية بن أبي سفيان"],
+    "correctAnswer": "معاوية بن أبي سفيان"
+},
+          {
+    "question": "من هو 'سر الرسول' ",
+    "choices": ["أبو بكر الصديق", "عمر بن الخطاب", "عثمان بن عفان", "حذيفة بن اليمان"],
+    "correctAnswer": "حذيفة بن اليمان"
+},
+          {
+    "question": "أين تقع بحيرة بيكال ",
+    "choices": ["جنوب سيبيريا في روسيا", "شمال كندا", "وسط أستراليا", "غرب الصين"],
+    "correctAnswer": "جنوب سيبيريا في روسيا"
+},
+          {
+    "question": "من بنى المسجد الأموي ",
+    "choices": ["معاوية بن أبي سفيان", "عمر بن الخطاب", "الوليد بن عبد الملك", "علي بن أبي طالب"],
+    "correctAnswer": "الوليد بن عبد الملك"
+},
+          {
+    "question": "ما هي البحيرة التي تمتلئ بالماء لمدة عامين ثم تجف لمدة عامين ",
+    "choices": [
+        "بحيرة فيكتوريا في أوغندا",
+        "بحيرة تيتيكاكا في بيرو وبوليفيا",
+        "بحيرة بيرام غات في الهند",
+        "بحيرة بايكال في روسيا"
+    ],
+    "correctAnswer": "بحيرة بيرام غات في الهند"
+},
+          {
+    "question": "كم عدد الواحات الرئيسية في الصحراء الغربية ",
+    "choices": [
+        "4",
+        "5",
+        "6",
+        "7"
+    ],
+    "correctAnswer": "6"
+},
+          {
+    "question": "من فتح جزيرة قبرص في عهد عثمان بن عفان",
+    "choices": [
+        "معاوية بن أبي سفيان",
+        "عمرو بن العاص",
+        "عبد الرحمن بن عوف",
+        "عقبة بن نافع الفهري"
+    ],
+    "correctAnswer": "معاوية بن أبي سفيان"
+},
+          {
+    "question": "من هو الصحابي الذي يُنسب إليه فتح إفريقيا، وتحديدا منطقة تونس الحالية ",
+    "choices": [
+        "خالد بن الوليد",
+        "عقبة بن نافع",
+        "عمرو بن العاص",
+        "عبدالله بن أبي السرح"
+    ],
+    "correctAnswer": "عبدالله بن أبي السرح"
+},
+{
+    "question": "في أي محافظة أنشأ محمد علي ترسانة السفن ",
+    "choices": ["الإسكندرية", "بورسعيد", "دمياط", "السويس"],
+    "correctAnswer": "الإسكندرية"
+},
+{
+    "question": "في أي مدينة ألمانية يقع المتحف اليهودي",
+    "choices": ["ميونيخ", "برلين", "هامبورغ", "فرانكفورت"],
+    "correctAnswer": "برلين"
+},
+{
+    "question": "كم عدد جزر الكويت",
+    "choices": ["1", "9", "10", "12"],
+    "correctAnswer": "9"
+},
+{
+    "question": "ما هي الدولتان اللتان تحدان ليبيا من الجنوب ",
+    "choices": ["مصر وتونس", "الجزائر والمغرب", "تشاد والسودان", "إثيوبيا ونيجيريا"],
+    "correctAnswer": "تشاد والسودان"
+},
+{
+    "question": "ما هو عدد سكان الوطن العربي تقريبا",
+    "choices": ["200 مليون نسمة", "300 مليون نسمة", "411 مليون نسمة", "500 مليون نسمة"],
+    "correctAnswer": "411 مليون نسمة"
+},
+
+        
+        ];
+
+        // قم بترتيب الأسئلة بشكل عشوائي
+        shuffleArray(quizData);
+
+        function shuffleArray(array) {
+            for (var i = array.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = array[i];
+                array[i] = array[j];
+                array[j] = temp;
+            }
+            return array;
+        }
+
+        function loadQuestion() {
+            var currentQuiz = quizData[currentQuestion];
+
+            var questionImageElement = document.getElementById('question-image');
+            var choicesElement = document.getElementById('choices');
+
+            if (currentQuiz.imageSrc) {
+                questionImageElement.src = currentQuiz.imageSrc; // تعيين مصدر الصورة
+                questionImageElement.style.display = 'block'; // عرض الصورة
+            } else {
+                questionImageElement.style.display = 'none'; // إخفاء الصورة إذا لم تكن متاحة
+            }
+
+            choicesElement.innerHTML = '';
+
+            // عرض السؤال كنص عادي إذا لم يكن هناك صورة
+            if (!currentQuiz.imageSrc) {
+                choicesElement.innerHTML += '<p>' + currentQuiz.question + '</p>';
+            }
+
+            for (var i = 0; i < currentQuiz.choices.length; i++) {
+                var choice = currentQuiz.choices[i];
+                choicesElement.innerHTML += '<label><input type="radio" name="choice" value="' + choice + '"> ' + choice + '</label>';
+            }
+
+            startTimer(); // بدء الموقت عند تحميل كل سؤال
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(function () {
+                document.getElementById('timer').innerHTML = 'Time Left: ' + timeLeft + 's';
+
+                if (timeLeft === 0) {
+                    clearInterval(timerInterval);
+                    alert('Time is up!'); // عرض رسالة انتهاء الوقت
+                    showResult(); // عرض النتيجة النهائية عند انتهاء الوقت
+                } else {
+                    timeLeft--;
+                }
+            }, 1000);
+        }
+
+        function checkAnswer() {
+            var selectedOption = document.querySelector('input[name="choice"]:checked');
+            if (!selectedOption) {
+                alert('Please select an answer.');
+                return;
+            }
+
+            var userAnswer = selectedOption.value;
+            var currentQuiz = quizData[currentQuestion];
+
+            var choicesLabels = document.querySelectorAll('label');
+
+            for (var i = 0; i < choicesLabels.length; i++) {
+                if (currentQuiz.correctAnswer === currentQuiz.choices[i]) {
+                    choicesLabels[i].classList.add('correct');
+                } else {
+                    choicesLabels[i].classList.add('incorrect');
+                }
+            }
+
+            if (userAnswer === currentQuiz.correctAnswer) {
+                score++;
+                document.getElementById('score').textContent = score;
+            }
+
+            clearInterval(timerInterval); // قبل التحقق من الإجابة، قم بإيقاف الموقت
+
+            currentQuestion++;
+
+            if (currentQuestion < quizData.length) {
+                setTimeout(function () {
+                    loadQuestion();
+                    resetColors();
+                }, 3000);
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            var resultElement = document.getElementById('result');
+            var correctAnswersElement = document.getElementById('correct-answers');
+
+            resultElement.innerHTML = 'Your Score: ' + score + ' out of ' + quizData.length;
+
+            correctAnswersElement.innerHTML = '<h3>Correct Answers:</h3>';
+            for (var i = 0; i < quizData.length; i++) {
+                var q = quizData[i];
+                var imgSrc = q.imageSrc;
+                var imgElement = '<img src="' + imgSrc + '" alt="Question Image">';
+                correctAnswersElement.innerHTML += imgElement + '<strong>Q: ' + q.question + '</strong><br>A: ' + q.correctAnswer + '<br>';
+            }
+
+            document.getElementById('result-container').style.display = 'block';
+            document.getElementById('retryBtn').style.display = 'block';
+        }
+
+        function resetColors() {
+            var choicesLabels = document.querySelectorAll('label');
+            for (var i = 0; i < choicesLabels.length; i++) {
+                choicesLabels[i].classList.remove('correct', 'incorrect'); // إزالة الأنماط المضافة سابقًا
+            }
+        }
+
+        function retryQuiz() {
+            currentQuestion = 0;
+            score = 0;
+            timeLeft = 1800; // إعادة تعيين الوقت للقيمة الأصلية
+
+            // قم بترتيب الأسئلة بشكل عشوائي عند إعادة المحاولة
+            shuffleArray(quizData);
+
+            document.getElementById('score').textContent = score; // تحديث قيمة العداد إلى الصفر
+            loadQuestion();
+            resetColors();
+
+            document.getElementById('result-container').style.display = 'none';
+            document.getElementById('retryBtn').style.display = 'none';
+        }
+
+        loadQuestion();
+    </script>
+
+</body>
+
+</html>
